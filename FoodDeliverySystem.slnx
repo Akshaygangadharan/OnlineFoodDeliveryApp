@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="OrderItem/OrderItem.csproj" Id="25668419-3b76-4bb2-9889-48717bda4e75" />
+  <Project Path="OrderManagement/OrderManagement.csproj" />
+</Solution>
