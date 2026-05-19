@@ -2,8 +2,15 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Orders.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-public class OrdersController : Controller
+[ApiController]
+[Route("api/[controller]")]
+public class OrdersController : ControllerBase
 {
     private readonly OrdersContext _context;
 
@@ -12,138 +19,101 @@ public class OrdersController : Controller
         _context = context;
     }
 
-    // GET: ORDERSS
-    public async Task<IActionResult> Index()    
+    // GET: api/orders
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Orders>>> Get(CancellationToken cancellationToken)
     {
-        return View(await _context.Orders.ToListAsync());
+        var list = await _context.Orders.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(list);
     }
 
-    // GET: ORDERSS/Details/5
-    public async Task<IActionResult> Details(System.Guid? orderid)
+    // GET: api/orders/{id}
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<Orders>> Get(Guid id, CancellationToken cancellationToken)
     {
-        if (orderid == null)
-        {
+        var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(m => m.OrderId == id, cancellationToken);
+        if (order == null)
             return NotFound();
-        }
-
-        var orders = await _context.Orders
-            .FirstOrDefaultAsync(m => m.OrderId == orderid);
-        if (orders == null)
-        {
-            return NotFound();
-        }
-
-        return View(orders);
+        return order;
     }
 
-    // GET: ORDERSS/Create
-    public IActionResult Create()
+    // GET: api/orders/user/{userId}
+    [HttpGet("user/{userId:guid}")]
+    public async Task<ActionResult<IEnumerable<Orders>>> GetByUser(Guid userId, CancellationToken cancellationToken)
     {
-        return View();
+        var orders = await _context.Orders.AsNoTracking().Where(o => o.CustomerId == userId).ToListAsync(cancellationToken);
+        return Ok(orders);
     }
 
-    // POST: ORDERSS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+    // POST: api/orders
     [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("OrderId,CustomerId,RestaurantId,DeliveryManId,OrderDate,Status,TotalAmount,PaymentAddressId,DeliveryAddressId,ExpectedDeliveryTime,ActualDeliveryTime,CreatedAt,UpdatedAt")] Orders orders)
+    public async Task<ActionResult<Orders>> Create(Orders orders, CancellationToken cancellationToken)
     {
-        if (ModelState.IsValid)
-        {
-            _context.Add(orders);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(orders);
-    }
-
-    // GET: ORDERSS/Edit/5
-    public async Task<IActionResult> Edit(System.Guid? orderid)
-    {
-        if (orderid == null)
-        {
-            return NotFound();
-        }
-
-        var orders = await _context.Orders.FindAsync(orderid);
         if (orders == null)
-        {
-            return NotFound();
-        }
-        return View(orders);
+            return BadRequest();
+
+        if (orders.OrderId == Guid.Empty)
+            orders.OrderId = Guid.NewGuid();
+
+        _context.Orders.Add(orders);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return CreatedAtAction(nameof(Get), new { id = orders.OrderId }, orders);
     }
 
-    // POST: ORDERSS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(System.Guid? orderid, [Bind("OrderId,CustomerId,RestaurantId,DeliveryManId,OrderDate,Status,TotalAmount,PaymentAddressId,DeliveryAddressId,ExpectedDeliveryTime,ActualDeliveryTime,CreatedAt,UpdatedAt")] Orders orders)
+    // PUT: api/orders/{id}
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, Orders orders, CancellationToken cancellationToken)
     {
-        if (orderid != orders.OrderId)
+        if (id != orders.OrderId)
+            return BadRequest();
+
+        _context.Entry(orders).State = EntityState.Modified;
+
+        try
         {
-            return NotFound();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!OrdersExists(id))
+                return NotFound();
+            throw;
         }
 
-        if (ModelState.IsValid)
-        {
-            try
-            {
-                _context.Update(orders);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!OrdersExists(orders.OrderId))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return RedirectToAction(nameof(Index));
-        }
-        return View(orders);
+        return NoContent();
     }
 
-    // GET: ORDERSS/Delete/5
-    public async Task<IActionResult> Delete(System.Guid? orderid)
+    // PUT: api/orders/{id}/status
+    [HttpPut("{id:guid}/status")]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] string status, CancellationToken cancellationToken)
     {
-        if (orderid == null)
-        {
+        var order = await _context.Orders.FindAsync(new object[] { id }, cancellationToken);
+        if (order == null)
             return NotFound();
-        }
 
-        var orders = await _context.Orders
-            .FirstOrDefaultAsync(m => m.OrderId == orderid);
-        if (orders == null)
-        {
-            return NotFound();
-        }
+        order.Status = status;
+        _context.Orders.Update(order);
+        await _context.SaveChangesAsync(cancellationToken);
 
-        return View(orders);
+        return NoContent();
     }
 
-    // POST: ORDERSS/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(System.Guid? orderid)
+    // DELETE: api/orders/{id}
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var orders = await _context.Orders.FindAsync(orderid);
-        if (orders != null)
-        {
-            _context.Orders.Remove(orders);
-        }
+        var order = await _context.Orders.FindAsync(new object[] { id }, cancellationToken);
+        if (order == null)
+            return NotFound();
 
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
+        _context.Orders.Remove(order);
+        await _context.SaveChangesAsync(cancellationToken);
+        return NoContent();
     }
 
-    private bool OrdersExists(System.Guid? orderid)
+    private bool OrdersExists(Guid id)
     {
-        return _context.Orders.Any(e => e.OrderId == orderid);
+        return _context.Orders.Any(e => e.OrderId == id);
     }
 }

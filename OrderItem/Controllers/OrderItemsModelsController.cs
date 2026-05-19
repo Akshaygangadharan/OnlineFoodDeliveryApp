@@ -2,8 +2,15 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OrderItems.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-public class OrderItemsModelsController : Controller
+[ApiController]
+[Route("api/[controller]")]
+public class OrderItemsModelsController : ControllerBase
 {
     private readonly OrderItemsContext _context;
 
@@ -12,138 +19,86 @@ public class OrderItemsModelsController : Controller
         _context = context;
     }
 
-    // GET: ORDERITEMSMODELS
-    public async Task<IActionResult> Index()    
+    // GET: api/orderitemsmodels
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<OrderItemsModel>>> Get(CancellationToken cancellationToken)
     {
-        return View(await _context.OrderItems.ToListAsync());
+        var list = await _context.OrderItems.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(list);
     }
 
-    // GET: ORDERITEMSMODELS/Details/5
-    public async Task<IActionResult> Details(System.Guid? orderitemid)
+    // GET: api/orderitemsmodels/{id}
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<OrderItemsModel>> Get(Guid id, CancellationToken cancellationToken)
     {
-        if (orderitemid == null)
-        {
+        var item = await _context.OrderItems.AsNoTracking().FirstOrDefaultAsync(m => m.OrderItemId == id, cancellationToken);
+        if (item == null)
             return NotFound();
-        }
-
-        var orderitemsmodel = await _context.OrderItems
-            .FirstOrDefaultAsync(m => m.OrderItemId == orderitemid);
-        if (orderitemsmodel == null)
-        {
-            return NotFound();
-        }
-
-        return View(orderitemsmodel);
+        return item;
     }
 
-    // GET: ORDERITEMSMODELS/Create
-    public IActionResult Create()
+    // GET: api/orderitemsmodels/order/{orderId}
+    [HttpGet("order/{orderId:guid}")]
+    public async Task<ActionResult<IEnumerable<OrderItemsModel>>> GetByOrder(Guid orderId, CancellationToken cancellationToken)
     {
-        return View();
+        var items = await _context.OrderItems.AsNoTracking().Where(i => i.OrderId == orderId).ToListAsync(cancellationToken);
+        return Ok(items);
     }
 
-    // POST: ORDERITEMSMODELS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+    // POST: api/orderitemsmodels
     [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("OrderItemId,OrderId,ProductId,RestuarantId,Quantity,UnitPrice,Discount,TaxAmount,ItemDescription,SubTotal,SpecialInstructions,Status,CreatedAt,LastUpdatedAt")] OrderItemsModel orderitemsmodel)
+    public async Task<ActionResult<OrderItemsModel>> Create(OrderItemsModel orderitemsmodel, CancellationToken cancellationToken)
     {
-        if (ModelState.IsValid)
-        {
-            _context.Add(orderitemsmodel);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(orderitemsmodel);
-    }
-
-    // GET: ORDERITEMSMODELS/Edit/5
-    public async Task<IActionResult> Edit(System.Guid? orderitemid)
-    {
-        if (orderitemid == null)
-        {
-            return NotFound();
-        }
-
-        var orderitemsmodel = await _context.OrderItems.FindAsync(orderitemid);
         if (orderitemsmodel == null)
-        {
-            return NotFound();
-        }
-        return View(orderitemsmodel);
+            return BadRequest();
+
+        if (orderitemsmodel.OrderItemId == Guid.Empty)
+            orderitemsmodel.OrderItemId = Guid.NewGuid();
+
+        _context.OrderItems.Add(orderitemsmodel);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return CreatedAtAction(nameof(Get), new { id = orderitemsmodel.OrderItemId }, orderitemsmodel);
     }
 
-    // POST: ORDERITEMSMODELS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(System.Guid? orderitemid, [Bind("OrderItemId,OrderId,ProductId,RestuarantId,Quantity,UnitPrice,Discount,TaxAmount,ItemDescription,SubTotal,SpecialInstructions,Status,CreatedAt,LastUpdatedAt")] OrderItemsModel orderitemsmodel)
+    // PUT: api/orderitemsmodels/{id}
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, OrderItemsModel orderitemsmodel, CancellationToken cancellationToken)
     {
-        if (orderitemid != orderitemsmodel.OrderItemId)
+        if (id != orderitemsmodel.OrderItemId)
+            return BadRequest();
+
+        _context.Entry(orderitemsmodel).State = EntityState.Modified;
+
+        try
         {
-            return NotFound();
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!OrderItemsModelExists(id))
+                return NotFound();
+            throw;
         }
 
-        if (ModelState.IsValid)
-        {
-            try
-            {
-                _context.Update(orderitemsmodel);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!OrderItemsModelExists(orderitemsmodel.OrderItemId))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return RedirectToAction(nameof(Index));
-        }
-        return View(orderitemsmodel);
+        return NoContent();
     }
 
-    // GET: ORDERITEMSMODELS/Delete/5
-    public async Task<IActionResult> Delete(System.Guid? orderitemid)
+    // DELETE: api/orderitemsmodels/{id}
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        if (orderitemid == null)
-        {
+        var item = await _context.OrderItems.FindAsync(new object[] { id }, cancellationToken);
+        if (item == null)
             return NotFound();
-        }
 
-        var orderitemsmodel = await _context.OrderItems
-            .FirstOrDefaultAsync(m => m.OrderItemId == orderitemid);
-        if (orderitemsmodel == null)
-        {
-            return NotFound();
-        }
-
-        return View(orderitemsmodel);
+        _context.OrderItems.Remove(item);
+        await _context.SaveChangesAsync(cancellationToken);
+        return NoContent();
     }
 
-    // POST: ORDERITEMSMODELS/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(System.Guid? orderitemid)
+    private bool OrderItemsModelExists(Guid id)
     {
-        var orderitemsmodel = await _context.OrderItems.FindAsync(orderitemid);
-        if (orderitemsmodel != null)
-        {
-            _context.OrderItems.Remove(orderitemsmodel);
-        }
-
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
-    }
-
-    private bool OrderItemsModelExists(System.Guid? orderitemid)
-    {
-        return _context.OrderItems.Any(e => e.OrderItemId == orderitemid);
+        return _context.OrderItems.Any(e => e.OrderItemId == id);
     }
 }
