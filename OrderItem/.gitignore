@@ -7,6 +7,7 @@ obj/
 # Local ASP.NET configuration
 appsettings.Development.json
 appsettings.*.local.json
+appsettings.json
 Properties/launchSettings.json
 secrets.json
 
