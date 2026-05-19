@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManagement.Models;
+using Orders.Models;
 
-namespace OrderManagement
+namespace Orders
 {
     public class Program
     {
@@ -12,7 +12,7 @@ namespace OrderManagement
             // Add services to the container.
 
             builder.Services.AddControllers();
-            builder.Services.AddDbContext<OrderManagementContext>(options =>
+            builder.Services.AddDbContext<OrdersContext>(options =>
                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             var app = builder.Build();
