@@ -3,3 +3,19 @@ obj/
 .vs/
 *.user
 *.rsuser
+
+# Local ASP.NET configuration
+appsettings.Development.json
+appsettings.*.local.json
+Properties/launchSettings.json
+secrets.json
+
+# Local databases and logs
+*.db
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.mdf
+*.ldf
+*.log
