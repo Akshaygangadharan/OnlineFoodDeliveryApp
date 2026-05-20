@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OrderItems.Models
+namespace Orders.Models
 {
-    public class OrderItemsModel
+    public class OrderItems
     {
         [Key]
         [Required]

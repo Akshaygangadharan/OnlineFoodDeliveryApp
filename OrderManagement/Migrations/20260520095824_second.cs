@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace OrderItems.Migrations
+namespace Orders.Migrations
 {
     /// <inheritdoc />
-    public partial class first : Migration
+    public partial class second : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,7 +32,7 @@ namespace OrderItems.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OrderItems", x => x.OrderItemId);
-                    table.CheckConstraint("CK_OrderItem_Status", "[status] IN ('cart', 'ordered')");
+                    table.CheckConstraint("CK_OrderItem_Status", "[status] IN ('Pending', 'Preparing', 'Ready', 'Cancelled')");
                 });
         }
 

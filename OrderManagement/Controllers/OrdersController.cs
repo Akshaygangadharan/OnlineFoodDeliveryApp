@@ -7,31 +7,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using OrderEntity = Orders.Models.Orders;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrdersController : ControllerBase
+public class OrdersController(OrdersContext context) : ControllerBase
 {
-    private readonly OrdersContext _context;
-
-    public OrdersController(OrdersContext context)
-    {
-        _context = context;
-    }
 
     // GET: api/orders
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Orders>>> Get(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<OrderEntity>>> Get(CancellationToken cancellationToken)
     {
-        var list = await _context.Orders.AsNoTracking().ToListAsync(cancellationToken);
+        var list = await context.Orders.AsNoTracking().ToListAsync(cancellationToken);
         return Ok(list);
     }
 
     // GET: api/orders/{id}
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Orders>> Get(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<OrderEntity>> Get(Guid id, CancellationToken cancellationToken)
     {
-        var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(m => m.OrderId == id, cancellationToken);
+        var order = await context.Orders.AsNoTracking().FirstOrDefaultAsync(m => m.OrderId == id, cancellationToken);
         if (order == null)
             return NotFound();
         return order;
@@ -39,15 +34,15 @@ public class OrdersController : ControllerBase
 
     // GET: api/orders/user/{userId}
     [HttpGet("user/{userId:guid}")]
-    public async Task<ActionResult<IEnumerable<Orders>>> GetByUser(Guid userId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<OrderEntity>>> GetByUser(Guid userId, CancellationToken cancellationToken)
     {
-        var orders = await _context.Orders.AsNoTracking().Where(o => o.CustomerId == userId).ToListAsync(cancellationToken);
+        var orders = await context.Orders.AsNoTracking().Where(o => o.CustomerId == userId).ToListAsync(cancellationToken);
         return Ok(orders);
     }
 
     // POST: api/orders
     [HttpPost]
-    public async Task<ActionResult<Orders>> Create(Orders orders, CancellationToken cancellationToken)
+    public async Task<ActionResult<OrderEntity>> Create(OrderEntity orders, CancellationToken cancellationToken)
     {
         if (orders == null)
             return BadRequest();
@@ -55,24 +50,24 @@ public class OrdersController : ControllerBase
         if (orders.OrderId == Guid.Empty)
             orders.OrderId = Guid.NewGuid();
 
-        _context.Orders.Add(orders);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Orders.Add(orders);
+        await context.SaveChangesAsync(cancellationToken);
 
         return CreatedAtAction(nameof(Get), new { id = orders.OrderId }, orders);
     }
 
     // PUT: api/orders/{id}
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, Orders orders, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(Guid id, OrderEntity orders, CancellationToken cancellationToken)
     {
         if (id != orders.OrderId)
             return BadRequest();
 
-        _context.Entry(orders).State = EntityState.Modified;
+        context.Entry(orders).State = EntityState.Modified;
 
         try
         {
-            await _context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -88,13 +83,13 @@ public class OrdersController : ControllerBase
     [HttpPut("{id:guid}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] string status, CancellationToken cancellationToken)
     {
-        var order = await _context.Orders.FindAsync(new object[] { id }, cancellationToken);
+        var order = await context.Orders.FindAsync(new object[] { id }, cancellationToken);
         if (order == null)
             return NotFound();
 
         order.Status = status;
-        _context.Orders.Update(order);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Orders.Update(order);
+        await context.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
@@ -103,17 +98,17 @@ public class OrdersController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var order = await _context.Orders.FindAsync(new object[] { id }, cancellationToken);
+        var order = await context.Orders.FindAsync(new object[] { id }, cancellationToken);
         if (order == null)
             return NotFound();
 
-        _context.Orders.Remove(order);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Orders.Remove(order);
+        await context.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 
     private bool OrdersExists(Guid id)
     {
-        return _context.Orders.Any(e => e.OrderId == id);
+        return context.Orders.Any(e => e.OrderId == id);
     }
 }
