@@ -9,12 +9,6 @@ namespace OrderItems.Models
         }
         public DbSet<OrderItemsModel> OrderItems { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-
-            modelBuilder.Entity<OrderItemsModel>()
-                .ToTable(t => t.HasCheckConstraint("CK_OrderItem_Status", "[status] IN ('Pending', 'Preparing', 'Ready', 'Cancelled')"));
-        }
+        
     }
 }
